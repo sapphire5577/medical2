@@ -1,0 +1,876 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>きもちの器｜健康チェック版 v0.1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+html,body{
+  margin:0;
+  min-height:100%;
+  touch-action:manipulation;
+}
+body{
+  font-family:"M PLUS Rounded 1c",-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;
+  color:#405b61;
+  background:
+    radial-gradient(circle at 12% 8%,rgba(194,240,230,.72),transparent 30%),
+    radial-gradient(circle at 88% 16%,rgba(190,224,244,.72),transparent 31%),
+    linear-gradient(180deg,#f9ffff 0%,#edf9f7 52%,#f7fbff 100%);
+}
+main{
+  max-width:520px;
+  margin:0 auto;
+  padding:18px 14px 24px;
+}
+.head{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  gap:9px;
+  color:#6d888d;
+  font-size:19px;
+  font-weight:500;
+  padding-right:4px;
+}
+.total{font-size:36px;font-weight:700;line-height:1;color:#36575e}
+.total-deco{
+  font-size:13px;
+  line-height:1;
+  opacity:.95;
+  transform:translateY(-8px) rotate(-8deg);
+  filter:drop-shadow(0 0 3px rgba(255,255,255,.94));
+}
+.total-deco-right{
+  font-size:11px;
+  transform:translateY(7px) rotate(8deg);
+  opacity:.9;
+}
+
+.stage{
+  --glass-side:10%;
+  /* 器の「底の長さ」に合わせるため、側面とは別に設定 */
+  --floor-side:14%;
+  position:relative;
+  width:min(100%,430px);
+  aspect-ratio:1/1;
+  min-height:280px;
+  margin:4px auto 14px;
+  overflow:hidden;
+  isolation:isolate;
+}
+.stage::before,
+.stage::after{
+  content:"✦";
+  position:absolute;
+  color:rgba(111,190,183,.62);
+  font-size:15px;
+  z-index:5;
+  pointer-events:none;
+  animation:twinkle 2.8s ease-in-out infinite;
+}
+.stage::before{left:3%;top:21%}
+.stage::after{right:3%;top:34%;font-size:11px;animation-delay:.8s}
+
+.glass{
+  position:absolute;
+  left:var(--glass-side);
+  right:var(--glass-side);
+  top:5%;
+  bottom:4%;
+  border:5px solid rgba(119,164,169,.42);
+  border-radius:22% 22% 34% 34% / 13% 13% 40% 40%;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.82),rgba(219,244,241,.18)),
+    radial-gradient(circle at 35% 25%,rgba(255,255,255,.78),transparent 38%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.78),
+    inset 0 0 0 2px rgba(117,168,174,.13),
+    inset 12px 0 22px rgba(255,255,255,.28),
+    inset -12px 0 22px rgba(159,214,220,.12),
+    0 8px 22px rgba(73,125,132,.08);
+  overflow:hidden;
+  z-index:1;
+}
+.glass::after{
+  content:"";
+  position:absolute;
+  left:7%;
+  top:10%;
+  width:10%;
+  height:58%;
+  border-radius:999px;
+  background:linear-gradient(180deg,rgba(255,255,255,.7),rgba(255,255,255,0));
+  filter:blur(2px);
+  pointer-events:none;
+}
+.floor-line{
+  position:absolute;
+  left:14%;
+  right:14%;
+  bottom:7.5%;
+  height:2px;
+  border-radius:999px;
+  background:linear-gradient(
+    90deg,
+    transparent,
+    rgba(128,169,174,.52) 12%,
+    rgba(220,245,242,.86) 50%,
+    rgba(128,169,174,.52) 88%,
+    transparent
+  );
+  box-shadow:0 0 5px rgba(119,183,185,.12);
+  z-index:3;
+  pointer-events:none;
+}
+
+.rim{
+  position:absolute;
+  left:8%;
+  right:8%;
+  top:2%;
+  height:12%;
+  border:2px solid rgba(119,164,169,.40);
+  border-radius:50%;
+  background:linear-gradient(180deg,rgba(255,255,255,.72),rgba(224,246,244,.26));
+  box-shadow:
+    inset 0 1px 2px rgba(255,255,255,.95),
+    0 2px 7px rgba(73,125,132,.08);
+  z-index:2;
+}
+.rim::after{
+  content:"";
+  position:absolute;
+  left:18%;
+  right:18%;
+  top:28%;
+  height:2px;
+  border-radius:999px;
+  background:rgba(255,255,255,.82);
+}
+
+/* 底の銀ラインは撤廃。
+   絵文字が器の丸みに沿って溜まることで、底の位置を表現します。 */
+/* 落ちてくる絵文字を少し大きく */
+ .fall-trail{
+  position:fixed;
+  left:0;
+  top:0;
+  pointer-events:none;
+  z-index:49;
+  line-height:1;
+  will-change:transform,opacity;
+  animation:fallTrailFade var(--trail-duration) ease-out forwards;
+}
+.fall-trail.star{
+  font-size:13px;
+  color:rgba(255,255,255,.78);
+  filter:drop-shadow(0 0 4px rgba(255,255,255,.82));
+}
+.fall-trail.heart{
+  font-size:12px;
+  color:rgba(255,181,209,.62);
+  filter:drop-shadow(0 0 3px rgba(255,255,255,.74));
+}
+@keyframes fallTrailFade{
+  0%{opacity:.82;transform:translate(-50%,-50%) scale(.72)}
+  100%{opacity:0;transform:translate(calc(-50% + var(--trail-dx)),calc(-50% + var(--trail-dy))) scale(.32)}
+}
+
+.ball{
+  position:absolute;
+  width:60px;
+  height:60px;
+  display:grid;
+  place-items:center;
+  font-size:54px;
+  line-height:1;
+  pointer-events:none;
+  will-change:transform;
+  filter:drop-shadow(0 1px 1px rgba(54,99,105,.14));
+  z-index:4;
+}
+.ball::after{
+  content:"";
+  position:absolute;
+  inset:2px;
+  border-radius:50%;
+  box-shadow:0 0 8px rgba(255,255,255,.18);
+  pointer-events:none;
+}
+
+.buttons{
+  width:min(100%,430px);
+  margin:auto;
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+}
+.btn{
+  position:relative;
+  min-height:68px;
+  border:1.5px solid rgba(119,177,178,.62);
+  border-top-color:rgba(255,255,255,.96);
+  border-left-color:rgba(255,255,255,.88);
+  border-radius:18px;
+  background:linear-gradient(145deg,rgba(255,255,255,.96),rgba(231,248,245,.82));
+  color:#41636a;
+  padding:7px 3px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  cursor:pointer;
+  font:inherit;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+  box-shadow:
+    0 3px 10px rgba(76,128,135,.10),
+    inset 0 1px 1px rgba(255,255,255,.98);
+  overflow:visible;
+  transform-origin:center;
+  transition:transform .12s ease,filter .12s ease,box-shadow .12s ease;
+}
+.btn::before{
+  content:"";
+  position:absolute;
+  left:8px;
+  right:8px;
+  top:5px;
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.98),transparent);
+  pointer-events:none;
+}
+.btn:active,
+.btn.is-popping{
+  transform:scale(.93);
+  filter:brightness(.98);
+  box-shadow:
+    0 1px 4px rgba(76,128,135,.12),
+    inset 0 1px 4px rgba(92,146,151,.08);
+}
+.btn.is-popping{
+  animation:buttonPop .28s cubic-bezier(.2,1.45,.35,1);
+}
+.emoji{font-size:25px;line-height:1}
+.label{
+  font-family:"M PLUS Rounded 1c",-apple-system,BlinkMacSystemFont,"Noto Sans JP",sans-serif;
+  font-size:12px;
+  font-weight:700;
+  line-height:1.18;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:100%;
+  letter-spacing:.01em;
+}
+.count{
+  font-size:11px;
+  font-weight:500;
+  color:#78949a;
+  font-variant-numeric:tabular-nums;
+}
+
+/* 12項目を4列×3行で見たときの、淡いミント〜ブルー系アクセント */
+.btn:nth-child(1){background:linear-gradient(145deg,#fbffff,#e5f6f3);border-color:#9bcac7}
+.btn:nth-child(2){background:linear-gradient(145deg,#fbffff,#e7f3f7);border-color:#9fc8d1}
+.btn:nth-child(3){background:linear-gradient(145deg,#fbffff,#e9f6f2);border-color:#a5cdc4}
+.btn:nth-child(4){background:linear-gradient(145deg,#fcffff,#eaf3f7);border-color:#a6cbd4}
+.btn:nth-child(5){background:linear-gradient(145deg,#fbffff,#e4f6f0);border-color:#91c9bd}
+.btn:nth-child(6){background:linear-gradient(145deg,#fbffff,#e8f4f5);border-color:#9cc7cb}
+.btn:nth-child(7){background:linear-gradient(145deg,#fbffff,#e5f1f5);border-color:#91c0cb}
+.btn:nth-child(8){background:linear-gradient(145deg,#fbffff,#e7f4f0);border-color:#9ccabd}
+.btn:nth-child(9){background:linear-gradient(145deg,#fbffff,#e9f4ef);border-color:#a5cbbd}
+.btn:nth-child(10){background:linear-gradient(145deg,#fbffff,#e8f2f6);border-color:#a0c4d0}
+.btn:nth-child(11){background:linear-gradient(145deg,#ffffff,#e5f7f0);border-color:#91cdb8}
+.btn:nth-child(12){background:linear-gradient(145deg,#ffffff,#e5f7f0);border-color:#91cdb8}
+.btn:nth-child(13){background:linear-gradient(145deg,#ffffff,#e9f5f7);border-color:#9bc7cf;grid-column:4}
+
+.btn::after{
+  content:"";
+  position:absolute;
+  inset:1px;
+  border-radius:17px;
+  border-top:1px solid rgba(255,255,255,.88);
+  border-left:1px solid rgba(255,255,255,.50);
+  pointer-events:none;
+}
+
+.reset{
+  font-family:"Yomogi","Zen Maru Gothic",sans-serif;
+  display:block;
+  margin:3px auto 0;
+  border:0;
+  background:none;
+  color:#8a8191;
+  font:inherit;
+  font-size:12px;
+  text-decoration:none;
+  cursor:pointer;
+  padding:9px 12px;
+  touch-action:manipulation;
+  position:relative;
+}
+.reset::before,
+.reset::after{
+  content:"✦";
+  color:#c9add9;
+  font-size:9px;
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+}
+.reset::before{left:-2px}
+.reset::after{right:-2px}
+
+/* 健康版のタップエフェクト：ミントの水滴＋泡、回復のハート、おまじないの星 */
+.fx{
+  position:fixed;
+  left:0;
+  top:0;
+  width:18px;
+  height:18px;
+  pointer-events:none;
+  z-index:50;
+  will-change:transform,opacity;
+}
+.fx.bubble{
+  border:1.5px solid rgba(116,206,194,.72);
+  border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.92),rgba(180,239,228,.18) 52%,rgba(118,203,194,.08));
+  box-shadow:inset 0 0 3px rgba(255,255,255,.8);
+  animation:fxBubble var(--duration) ease-out forwards;
+}
+.fx.drop{
+  width:12px;height:16px;
+  border-radius:60% 60% 62% 62% / 70% 70% 42% 42%;
+  border:1.5px solid rgba(100,190,187,.62);
+  background:linear-gradient(180deg,rgba(255,255,255,.8),rgba(139,221,211,.22));
+  transform:rotate(45deg);
+  animation:fxDrop var(--duration) ease-out forwards;
+}
+.fx.heart{
+  width:auto;height:auto;
+  font-size:14px;
+  line-height:1;
+  filter:drop-shadow(0 1px 2px rgba(82,164,150,.18));
+  animation:fxHeart var(--duration) ease-out forwards;
+}
+.fx.star{
+  width:auto;height:auto;
+  font-size:13px;
+  line-height:1;
+  filter:drop-shadow(0 0 4px rgba(255,255,255,.9));
+  animation:fxStar var(--duration) ease-out forwards;
+}
+.fx.spark{
+  width:auto;height:auto;
+  font-size:17px;
+  line-height:1;
+  filter:drop-shadow(0 0 5px rgba(255,255,255,.95));
+  animation:fxSpark var(--duration) ease-out forwards;
+}
+@keyframes fxSpark{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.35) rotate(-10deg)}
+  18%{opacity:1;transform:translate(-50%,-50%) scale(1.15) rotate(0deg)}
+  100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.7) rotate(18deg)}
+}
+@keyframes fxBubble{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.35)}
+  18%{opacity:.95}
+  100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1.05)}
+}
+@keyframes fxDrop{
+  0%{opacity:0;transform:translate(-50%,-20%) rotate(45deg) scale(.5)}
+  18%{opacity:.85}
+  100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-20% + var(--dy))) rotate(45deg) scale(.8)}
+}
+@keyframes fxHeart{
+  0%{opacity:0;transform:translate(-50%,-40%) scale(.55)}
+  18%{opacity:1}
+  100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.95)}
+}
+@keyframes fxStar{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.4) rotate(0deg)}
+  20%{opacity:1}
+  100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1.15) rotate(80deg)}
+}
+
+</style>
+</head>
+<body>
+<main id="app">
+  <div class="head"><span class="total-deco" aria-hidden="true">🌟</span><span>合計</span><span id="total" class="total">0</span><span class="total-deco total-deco-right" aria-hidden="true">🌟</span></div>
+
+  <div id="stage" class="stage" aria-label="健康チェックの器">
+    <div class="glass"></div>
+    <div class="rim"></div>
+    <div class="floor-line" aria-hidden="true"></div>
+  </div>
+
+  <div id="buttons" class="buttons"></div>
+  <button type="button" id="reset" class="reset">今すぐ空にする</button>
+
+  <section class="records" aria-label="きろく">
+    <button type="button" id="recordsToggle" class="records-toggle" aria-expanded="false">
+      <span>✦ きろく ✦</span>
+      <span class="records-arrow" aria-hidden="true">⌄</span>
+    </button>
+    <div id="recordsPanel" class="records-panel" hidden></div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const moods=[
+    ["😖","頭痛"],["😨","腹痛"],["😔","倦怠感"],["🥺","落ち込み"],
+    ["💤","眠気"],["🌸","吐き気"],["🥶","寒気"],["🥵","火照り"],
+    ["😠","イライラ"],["😣","焦燥感"],["😵‍💫","気圧痛"],["💝","回復中"],
+    ["⭐️","おまじない"]
+  ];
+
+  const STORAGE_KEY="kimochi-no-utsuwa-health-records-v1";
+  const ACTIVE_KEY="kimochi-no-utsuwa-health-active-v1";
+  const MAX_RECORDS=31;
+
+  const stage=document.getElementById("stage");
+  const buttons=document.getElementById("buttons");
+  const total=document.getElementById("total");
+  const reset=document.getElementById("reset");
+  const recordsToggle=document.getElementById("recordsToggle");
+  const recordsPanel=document.getElementById("recordsPanel");
+  const counts=Array(moods.length).fill(0);
+  const balls=[];
+  let raf=0;
+
+  function dayKey(date=new Date()){
+    const d=new Date(date);
+    d.setHours(d.getHours()-4);
+    const y=d.getFullYear();
+    const m=String(d.getMonth()+1).padStart(2,"0");
+    const day=String(d.getDate()).padStart(2,"0");
+    return `${y}-${m}-${day}`;
+  }
+
+  function loadRecords(){
+    try{
+      const data=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
+      return Array.isArray(data)?data:[];
+    }catch(e){return []}
+  }
+
+  function saveRecords(records){
+    try{localStorage.setItem(STORAGE_KEY,JSON.stringify(records.slice(-MAX_RECORDS)));}catch(e){}
+  }
+
+  function saveActive(){
+    try{
+      localStorage.setItem(ACTIVE_KEY,JSON.stringify({
+        day:dayKey(),
+        counts:[...counts]
+      }));
+    }catch(e){}
+  }
+
+  function restoreActive(){
+    try{
+      const data=JSON.parse(localStorage.getItem(ACTIVE_KEY)||"null");
+      if(!data || data.day!==dayKey() || !Array.isArray(data.counts)) return false;
+      for(let i=0;i<moods.length;i++) counts[i]=Number(data.counts[i])||0;
+      return true;
+    }catch(e){return false}
+  }
+
+  function clearActiveStorage(){
+    try{localStorage.removeItem(ACTIVE_KEY)}catch(e){}
+  }
+
+  function snapshotCurrentRecord(dateKey=dayKey()){
+    const items=[];
+    for(let i=0;i<moods.length;i++){
+      if(counts[i]>0){
+        items.push({emoji:moods[i][0],label:moods[i][1],count:counts[i]});
+      }
+    }
+    return items.length?{date:dateKey,items}:null;
+  }
+
+  function archiveCurrentDay(dateKey=dayKey()){
+    const record=snapshotCurrentRecord(dateKey);
+    if(!record) return;
+
+    const records=loadRecords().filter(r=>r && r.date!==record.date);
+    records.push(record);
+    records.sort((a,b)=>a.date.localeCompare(b.date));
+    saveRecords(records);
+  }
+
+  function renderRecords(){
+    const records=loadRecords().sort((a,b)=>b.date.localeCompare(a.date));
+    recordsPanel.innerHTML="";
+
+    if(!records.length){
+      recordsPanel.innerHTML='<div class="records-empty">まだ記録はありません ✦</div>';
+      return;
+    }
+
+    records.forEach(record=>{
+      const card=document.createElement("div");
+      card.className="record-day";
+
+      const date=document.createElement("div");
+      date.className="record-date";
+      date.textContent=formatRecordDate(record.date);
+      card.appendChild(date);
+
+      const items=document.createElement("div");
+      items.className="record-items";
+
+      (record.items||[]).forEach(item=>{
+        const row=document.createElement("div");
+        row.className="record-item";
+
+        const emoji=document.createElement("span");
+        emoji.className="record-emoji";
+        emoji.textContent=item.emoji;
+
+        const label=document.createElement("span");
+        label.textContent=item.label||"";
+
+        const count=document.createElement("span");
+        count.className="record-count";
+        count.textContent=`×${item.count}`;
+
+        row.append(emoji,label,count);
+        items.appendChild(row);
+      });
+
+      card.appendChild(items);
+      recordsPanel.appendChild(card);
+    });
+  }
+
+  function formatRecordDate(key){
+    const [y,m,d]=key.split("-").map(Number);
+    const date=new Date(y,m-1,d);
+    const weekdays=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    return `${m}/${d} ${weekdays[date.getDay()]}`;
+  }
+
+  function update(){
+    total.textContent=counts.reduce((a,b)=>a+b,0);
+    counts.forEach((c,i)=>{
+      document.getElementById("c"+i).textContent=c;
+    });
+    saveActive();
+  }
+
+  moods.forEach((m,i)=>{
+    const b=document.createElement("button");
+    b.type="button";
+    b.className="btn";
+    b.innerHTML=`<span class="emoji">${m[0]}</span><span class="label">${m[1]}</span><span class="count" id="c${i}">0</span>`;
+
+    b.addEventListener("pointerdown",()=>popButton(b,i));
+    b.addEventListener("click",()=>drop(i));
+    buttons.appendChild(b);
+  });
+
+  function spawnEffect(kind, rect, i){
+    const count = kind==="bubble" ? 9 : kind==="spark" ? 5 : 8;
+    const glyph = kind==="heart" ? "♡" : kind==="star" ? "★" : "✨";
+
+    for(let n=0;n<count;n++){
+      const fx=document.createElement("span");
+      fx.className=`fx ${kind}`;
+
+      const angle=(Math.PI*2*n/count)+(Math.random()-.5)*.5;
+      const distance=22+Math.random()*46;
+      const dx=Math.cos(angle)*distance;
+      const dy=Math.sin(angle)*distance-18;
+      const size=(kind==="bubble" ? 8+Math.random()*9 : 0);
+      const duration=kind==="bubble"
+        ? 650+Math.random()*330
+        : 620+Math.random()*300;
+
+      if(kind==="heart" || kind==="star" || kind==="spark") fx.textContent=glyph;
+
+      fx.style.left=`${rect.left+rect.width/2}px`;
+      fx.style.top=`${rect.top+rect.height/2}px`;
+      fx.style.setProperty("--dx",`${dx}px`);
+      fx.style.setProperty("--dy",`${dy}px`);
+      fx.style.setProperty("--duration",`${duration}ms`);
+      if(size) fx.style.width=`${size}px`, fx.style.height=`${size}px`;
+
+      document.body.appendChild(fx);
+      setTimeout(()=>fx.remove(),duration+80);
+    }
+  }
+
+  function popButton(button, index){
+    button.classList.remove("is-popping");
+    void button.offsetWidth;
+    button.classList.add("is-popping");
+
+    const rect=button.getBoundingClientRect();
+
+    // 通常の症状＋気圧痛：ミントの水滴＋小さな泡
+    if(index < 11){
+      spawnEffect("drop",rect,index);
+      spawnEffect("bubble",rect,index);
+    // 回復中：淡いハート＋キラッ
+    }else if(index===11){
+      spawnEffect("heart",rect,index);
+      spawnEffect("spark",rect,index);
+    // おまじない：小さな星＋キラッ
+    }else{
+      spawnEffect("star",rect,index);
+      spawnEffect("spark",rect,index);
+    }
+
+    setTimeout(()=>button.classList.remove("is-popping"),320);
+  }
+
+  const BALL_SIZE=60;
+  const BALL_GAP=0;
+
+  function drop(i, countIt=true){
+    if(countIt){
+      counts[i]++;
+      update();
+    }
+
+    const s=stage.getBoundingClientRect();
+    const left=s.width*.13;
+    const right=s.width*.87-BALL_SIZE;
+
+    const b={
+      el:document.createElement("div"),
+      x:left+Math.random()*Math.max(0,right-left),
+      y:-BALL_SIZE,
+      vx:(Math.random()-.5)*2.0,
+      vy:0,
+      emoji:moods[i][0],
+      floor:s.height*.88
+    };
+
+    b.el.className="ball";
+    b.el.textContent=b.emoji;
+    stage.appendChild(b.el);
+    balls.push(b);
+
+    // 💝回復中／⭐️おまじないだけ、落下中に淡い光を連れてくる。
+    // 既存の「上から落ちてくる」動きはそのまま。
+    if(i===11 || i===12){
+      const trailKind=i===12 ? "star" : "heart";
+      const trailGlyph=i===12 ? "✦" : "♡";
+      let elapsed=0;
+      const trailTimer=setInterval(()=>{
+        if(!document.body.contains(b.el) || elapsed>4200){
+          clearInterval(trailTimer);
+          return;
+        }
+        const r=b.el.getBoundingClientRect();
+        const t=document.createElement("span");
+        t.className=`fall-trail ${trailKind}`;
+        t.textContent=trailGlyph;
+        t.style.left=`${r.left+r.width/2+(Math.random()-.5)*18}px`;
+        t.style.top=`${r.top+r.height*.45+(Math.random()-.5)*8}px`;
+        t.style.setProperty("--trail-dx",`${(Math.random()-.5)*22}px`);
+        t.style.setProperty("--trail-dy",`${-10-Math.random()*25}px`);
+        t.style.setProperty("--trail-duration",`${430+Math.random()*220}ms`);
+        document.body.appendChild(t);
+        setTimeout(()=>t.remove(),760);
+        elapsed+=105;
+      },105);
+    }
+
+    if(!raf) raf=requestAnimationFrame(tick);
+  }
+
+  // 保存されている「今日の個数」だけを使って、
+  // 器を開き直したときに上から自然に落とし直す。
+  function restoreBallsFromCounts(){
+    const queue=[];
+    counts.forEach((count,i)=>{
+      for(let n=0;n<count;n++) queue.push(i);
+    });
+
+    // 同時に全部落とさず、少しずつ落とすことで
+    // いつもの「わちゃっ」とした自然な落下を再現。
+    queue.forEach((i,n)=>{
+      setTimeout(()=>drop(i,false), 90*n);
+    });
+  }
+
+  function curvedWalls(yCenter){
+    const W=stage.clientWidth;
+    const H=stage.clientHeight;
+    const rX=W*.80*.34;
+    const rY=H*.92*.40;
+    const glassLeft=W*.10;
+    const glassRight=W*.90;
+    const glassBottom=H*.96;
+    const transition=glassBottom-rY;
+
+    if(yCenter<=transition){
+      return {min:glassLeft,max:glassRight-BALL_SIZE};
+    }
+
+    const t=Math.min(1,Math.max(0,(yCenter-transition)/rY));
+    const inward=rX*(1-Math.sqrt(Math.max(0,1-t*t)));
+    return {min:glassLeft+inward,max:glassRight-BALL_SIZE-inward};
+  }
+
+  function tick(){
+    for(let i=0;i<balls.length;i++){
+      const b=balls[i];
+      b.vy+=.34;
+      b.x+=b.vx;
+      b.y+=b.vy;
+
+      if(b.y>b.floor){
+        b.y=b.floor;
+        if(Math.abs(b.vy)>1.0){
+          // 底では「ぽよん」。ただしエネルギーはかなり早く失う。
+          b.vy*=-.18;
+          b.vx+=(Math.random()-.5)*.28;
+        }else{
+          b.vy=0;
+          b.vx*=.82;
+        }
+      }
+
+      const walls=curvedWalls(b.y+BALL_SIZE/2);
+      if(b.x<walls.min){
+        b.x=walls.min;
+        b.vx=Math.abs(b.vx)*.45;
+      }else if(b.x>walls.max){
+        b.x=walls.max;
+        b.vx=-Math.abs(b.vx)*.45;
+      }
+
+      // 見た目の「重なり」は許しつつ、完全な同一点だけは避ける。
+      // ここを大きくしすぎないことで、以前の自然なわちゃわちゃ感を維持。
+      for(let j=0;j<i;j++){
+        const o=balls[j];
+        const dx=b.x-o.x;
+        const dy=b.y-o.y;
+        const d=Math.hypot(dx,dy);
+        const minD=44;
+
+        if(d>0&&d<minD){
+          const nx=dx/d;
+          const ny=dy/d;
+          const push=(minD-d)*.42;
+          b.x+=nx*push;
+          b.y+=ny*push;
+          o.x-=nx*push;
+          o.y-=ny*push;
+
+          // 衝突による上向きの跳ね返りは「チクッ」と感じる程度。
+          if(Math.abs(dy)>1){
+            b.vy*=.74;
+            o.vy*=.88;
+          }
+          b.vx+=nx*.07;
+          o.vx-=nx*.04;
+        }
+      }
+
+      // 底付近では細かな揺れを少しずつ吸収して、最終的に静かになる。
+      if(b.y>b.floor-7 && Math.abs(b.vy)<1.5){
+        b.vy*=.65;
+        b.vx*=.96;
+      }
+
+      b.el.style.transform=`translate3d(${b.x}px,${b.y}px,0)`;
+    }
+
+    raf=balls.length?requestAnimationFrame(tick):0;
+  }
+
+  function clear(){
+    counts.fill(0);
+    balls.splice(0).forEach(b=>b.el.remove());
+    clearActiveStorage();
+    updateWithoutSaving();
+  }
+
+  function updateWithoutSaving(){
+    total.textContent=counts.reduce((a,b)=>a+b,0);
+    counts.forEach((c,i)=>{
+      document.getElementById("c"+i).textContent=c;
+    });
+  }
+
+  function finishDay(){
+    const oldActive=(()=>{
+      try{return JSON.parse(localStorage.getItem(ACTIVE_KEY)||"null")}catch(e){return null}
+    })();
+
+    if(oldActive && oldActive.day && oldActive.day!==dayKey() && Array.isArray(oldActive.counts)){
+      const previous=[...counts];
+      for(let i=0;i<moods.length;i++) counts[i]=Number(oldActive.counts[i])||0;
+      archiveCurrentDay(oldActive.day);
+      counts.splice(0,counts.length,...previous);
+    }else{
+      archiveCurrentDay(dayKey());
+    }
+
+    counts.fill(0);
+    balls.splice(0).forEach(b=>b.el.remove());
+    clearActiveStorage();
+    updateWithoutSaving();
+    renderRecords();
+  }
+
+  reset.addEventListener("click",clear);
+
+  recordsToggle.addEventListener("click",()=>{
+    const open=recordsToggle.getAttribute("aria-expanded")==="true";
+    recordsToggle.setAttribute("aria-expanded",String(!open));
+    recordsPanel.hidden=open;
+    if(!open) renderRecords();
+  });
+
+  function nextReset(){
+    const n=new Date();
+    n.setHours(4,0,0,0);
+    if(n<=new Date()) n.setDate(n.getDate()+1);
+    setTimeout(()=>{finishDay();nextReset()},n-Date.now());
+  }
+
+  // ページを4時以降に開き直した場合も、前日の保存を取りこぼさない。
+  (function prepareDay(){
+    try{
+      const active=JSON.parse(localStorage.getItem(ACTIVE_KEY)||"null");
+      if(active && active.day && active.day!==dayKey() && Array.isArray(active.counts)){
+        const temp=[...counts];
+        for(let i=0;i<moods.length;i++) counts[i]=Number(active.counts[i])||0;
+        archiveCurrentDay(active.day);
+        counts.splice(0,counts.length,...temp);
+        clearActiveStorage();
+      }
+    }catch(e){}
+  })();
+
+  const restoredToday=restoreActive();
+  updateWithoutSaving();
+  renderRecords();
+
+  // 今日の記録が残っていた場合だけ、器の中身を再現する。
+  if(restoredToday){
+    restoreBallsFromCounts();
+  }
+
+  nextReset();
+})();
+</script>
+</body>
+</html>
