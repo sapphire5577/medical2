@@ -156,29 +156,54 @@ main{
 /* 底の銀ラインは撤廃。
    絵文字が器の丸みに沿って溜まることで、底の位置を表現します。 */
 /* 落ちてくる絵文字を少し大きく */
- .fall-trail{
-  position:fixed;
+/* 💝 回復中 / ⭐️ おまじない 専用の落下トレイル */
+.fall-trail{
+  position:absolute;
   left:0;
   top:0;
   pointer-events:none;
-  z-index:49;
+  z-index:5;
   line-height:1;
   will-change:transform,opacity;
-  animation:fallTrailFade var(--trail-duration) ease-out forwards;
+  transform:translate(-50%,-50%);
 }
+
 .fall-trail.star{
-  font-size:13px;
-  color:rgba(255,255,255,.78);
-  filter:drop-shadow(0 0 4px rgba(255,255,255,.82));
+  color:rgba(255,255,255,.88);
+  text-shadow:
+    0 0 3px rgba(255,255,255,.95),
+    0 0 7px rgba(180,235,235,.55);
 }
+
 .fall-trail.heart{
-  font-size:12px;
-  color:rgba(255,181,209,.62);
-  filter:drop-shadow(0 0 3px rgba(255,255,255,.74));
+  color:rgba(255,190,216,.72);
+  text-shadow:
+    0 0 3px rgba(255,255,255,.82),
+    0 0 6px rgba(255,190,216,.38);
 }
-@keyframes fallTrailFade{
-  0%{opacity:.82;transform:translate(-50%,-50%) scale(.72)}
-  100%{opacity:0;transform:translate(calc(-50% + var(--trail-dx)),calc(-50% + var(--trail-dy))) scale(.32)}
+
+.fall-trail.particle{
+  opacity:0;
+  animation:trailParticle var(--trail-duration) ease-out forwards;
+}
+
+@keyframes trailParticle{
+  0%{
+    opacity:var(--trail-opacity);
+    transform:
+      translate(-50%,-50%)
+      scale(var(--trail-scale));
+  }
+
+  100%{
+    opacity:0;
+    transform:
+      translate(
+        calc(-50% + var(--trail-dx)),
+        calc(-50% + var(--trail-dy))
+      )
+      scale(.25);
+  }
 }
 
 .ball{
@@ -666,29 +691,103 @@ main{
 
     // 💝回復中／⭐️おまじないだけ、落下中に淡い光を連れてくる。
     // 既存の「上から落ちてくる」動きはそのまま。
-    if(i===11 || i===12){
-      const trailKind=i===12 ? "star" : "heart";
-      const trailGlyph=i===12 ? "✦" : "♡";
-      let elapsed=0;
-      const trailTimer=setInterval(()=>{
-        if(!document.body.contains(b.el) || elapsed>4200){
-          clearInterval(trailTimer);
-          return;
-        }
-        const r=b.el.getBoundingClientRect();
-        const t=document.createElement("span");
-        t.className=`fall-trail ${trailKind}`;
-        t.textContent=trailGlyph;
-        t.style.left=`${r.left+r.width/2+(Math.random()-.5)*18}px`;
-        t.style.top=`${r.top+r.height*.45+(Math.random()-.5)*8}px`;
-        t.style.setProperty("--trail-dx",`${(Math.random()-.5)*22}px`);
-        t.style.setProperty("--trail-dy",`${-10-Math.random()*25}px`);
-        t.style.setProperty("--trail-duration",`${430+Math.random()*220}ms`);
-        document.body.appendChild(t);
-        setTimeout(()=>t.remove(),760);
-        elapsed+=105;
-      },105);
+// 💝回復中／⭐️おまじないだけ、落下中に専用トレイルを連れてくる
+if(i===11 || i===12){
+
+  const isStar = i===12;
+
+  let trailTimer = null;
+  let elapsed = 0;
+
+  trailTimer = setInterval(()=>{
+
+    if(!balls.includes(b) || !document.body.contains(b.el)){
+      clearInterval(trailTimer);
+      return;
     }
+
+    // ボール自身と同じ stage 座標系で配置する
+    const bx = b.x + BALL_SIZE / 2;
+    const by = b.y + BALL_SIZE * .45;
+
+    // ボールの真上に4〜5個の粒を並べる
+    const particleCount = 5;
+
+    for(let n=0; n<particleCount; n++){
+
+      const t = document.createElement("span");
+
+      t.className =
+        `fall-trail ${isStar ? "star" : "heart"} particle`;
+
+      // ⭐️はキラキラ、💝は小さなハート
+      t.textContent = isStar ? "✦" : "♡";
+
+      // 上に行くほど小さく、薄くする
+      const progress = n / (particleCount - 1);
+
+      // いちばん下が濃く、上へ行くほど透明
+      const opacity =
+        0.68 - progress * 0.50;
+
+      const scale =
+        0.72 - progress * 0.32;
+
+      // ボールから上方向へ
+      const rise =
+        13 + n * 12 + Math.random() * 5;
+
+      // 少しだけ左右に揺らす
+      const sway =
+        (Math.random() - 0.5) * (10 + n * 3);
+
+      t.style.left = `${bx + sway}px`;
+      t.style.top = `${by - rise}px`;
+
+      t.style.fontSize =
+        `${11 - progress * 3}px`;
+
+      t.style.setProperty(
+        "--trail-opacity",
+        opacity.toFixed(2)
+      );
+
+      t.style.setProperty(
+        "--trail-scale",
+        scale.toFixed(2)
+      );
+
+      t.style.setProperty(
+        "--trail-dx",
+        `${(Math.random() - 0.5) * 16}px`
+      );
+
+      t.style.setProperty(
+        "--trail-dy",
+        `${-8 - Math.random() * 18}px`
+      );
+
+      t.style.setProperty(
+        "--trail-duration",
+        `${480 + Math.random() * 220}ms`
+      );
+
+      stage.appendChild(t);
+
+      setTimeout(()=>{
+        t.remove();
+      },800);
+    }
+
+    elapsed += 110;
+
+    // 落下が長引いても無限生成しない
+    if(elapsed > 4500){
+      clearInterval(trailTimer);
+    }
+
+  },110);
+}
 
     if(!raf) raf=requestAnimationFrame(tick);
   }
